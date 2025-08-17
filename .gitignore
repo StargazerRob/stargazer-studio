@@ -1,0 +1,14 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore generated video files
+*.mp4
+
+# Ignore Python cache files
+__pycache__/
+
+# Ignore macOS specific files
+.DS_Store
+
+# Ignore stills (test images)
+stills
