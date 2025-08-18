@@ -18,6 +18,14 @@ class TimelapseWorker(QThread):
         
     def run(self):
         try:
+            # Ensure resolution dimensions are even for the libx264 encoder
+            width, height = self.resolution
+            if width % 2 != 0:
+                width -= 1
+            if height % 2 != 0:
+                height -= 1
+            self.resolution = (width, height)
+            
             self.status.emit("Processing images...")
             temp_dir = Path("temp_timelapse")
             temp_dir.mkdir(exist_ok=True)

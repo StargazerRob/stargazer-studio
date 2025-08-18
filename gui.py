@@ -1,4 +1,5 @@
 import os
+from PIL import Image
 from PyQt5.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout, 
                              QWidget, QPushButton, QLabel, QListWidget, QSpinBox,
                              QProgressBar, QFileDialog, QMessageBox, QComboBox,
@@ -13,6 +14,7 @@ class TimelapseGUI(QMainWindow):
         super().__init__()
         self.image_paths = []
         self.worker = None
+        self.source_resolution = None
         self.init_ui()
         
     def init_ui(self):
@@ -148,6 +150,16 @@ class TimelapseGUI(QMainWindow):
         )
         
         if files:
+            # If this is the first batch of images, get resolution from the first one
+            if not self.image_paths:
+                try:
+                    with Image.open(files[0]) as img:
+                        width, height = img.size
+                        self.source_resolution = (width, height)
+                        self.update_resolution_combo()
+                except Exception as e:
+                    print(f"Could not read image dimensions: {e}")
+
             for file_path in files:
                 if file_path not in self.image_paths:
                     self.image_paths.append(file_path)
@@ -159,8 +171,27 @@ class TimelapseGUI(QMainWindow):
         """Clear all images from the list"""
         self.image_paths.clear()
         self.image_list.clear()
+        self.source_resolution = None
+        self.update_resolution_combo()
         self.update_ui_state()
+
+    def update_resolution_combo(self):
+        """Update the resolution dropdown with the source image resolution."""
+        # Remove existing source resolution item if it exists
+        for i in range(self.resolution_combo.count()):
+            if self.resolution_combo.itemText(i).startswith("Source Image"):
+                self.resolution_combo.removeItem(i)
+                break
         
+        if self.source_resolution:
+            width, height = self.source_resolution
+            res_text = f"Source Image ({width}x{height})"
+            self.resolution_combo.insertItem(0, res_text)
+            self.resolution_combo.setCurrentIndex(0)
+        else:
+            # If no source resolution, default to the first standard one
+            self.resolution_combo.setCurrentIndex(0)
+
     def on_resolution_changed(self):
         """Handle resolution combo box change"""
         is_custom = self.resolution_combo.currentText() == "Custom"
@@ -189,7 +220,9 @@ class TimelapseGUI(QMainWindow):
         """Get the selected resolution as tuple"""
         resolution_text = self.resolution_combo.currentText()
         
-        if resolution_text == "1920x1080 (Full HD)":
+        if resolution_text.startswith("Source Image") and self.source_resolution:
+            return self.source_resolution
+        elif resolution_text == "1920x1080 (Full HD)":
             return (1920, 1080)
         elif resolution_text == "1280x720 (HD)":
             return (1280, 720)
